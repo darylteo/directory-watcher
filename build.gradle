@@ -69,7 +69,7 @@ uploadArchives {
           name 'Java Directory Watcher'
           description 'Watch and receive notifications on filesystem changes using Java 7 NIO\'s WatchService'
           inceptionYear '2013'
-          scm { url 'http://github.com/darylteo/directorywatcher' }
+          url 'http://github.com/darylteo/directorywatcher'
 
           developers {
             developer {
