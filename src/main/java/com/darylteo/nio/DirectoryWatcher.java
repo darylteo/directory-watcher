@@ -2,8 +2,15 @@ package com.darylteo.nio;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -11,10 +18,15 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-public class DirectoryWatcher {
-  private final List<DirectoryWatcherSubscriber> subscribers = new ArrayList<>();
+import com.sun.nio.file.SensitivityWatchEventModifier;
 
+public class DirectoryWatcher {
+  /* Properties */
   private Path path;
+  private WatchService watcher;
+
+  /* Subscriptions */
+  private final List<DirectoryWatcherSubscriber> subscribers = new ArrayList<>();
 
   /* Used to filter files */
   private final List<Pattern> includes = new LinkedList<>();
@@ -24,8 +36,17 @@ public class DirectoryWatcher {
   private final Set<WatchKey> dirs = new HashSet<>();
 
   /* Constructors */
-  DirectoryWatcher(Path path) throws IOException {
+  DirectoryWatcher(final WatchService watcher, final Path path) throws IOException {
     this.path = path;
+    this.watcher = watcher;
+
+    Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+      @Override
+      public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+        register(dir, watcher);
+        return FileVisitResult.CONTINUE;
+      }
+    });
   }
 
   /* Properties */
@@ -33,11 +54,24 @@ public class DirectoryWatcher {
     return this.path;
   }
 
+  /* WatchService */
+  private void register(final Path path, final WatchService watcher) throws IOException {
+    dirs.add(path.register(
+      watcher,
+      new WatchEvent.Kind<?>[] {
+        StandardWatchEventKinds.ENTRY_CREATE,
+        StandardWatchEventKinds.ENTRY_DELETE,
+        StandardWatchEventKinds.ENTRY_MODIFY
+      },
+      new WatchEvent.Modifier[] { SensitivityWatchEventModifier.HIGH }
+      ));
+  }
+
+  /* Subscriptions */
   List<DirectoryWatcherSubscriber> getSubscribers() {
     return this.subscribers;
   }
 
-  /* Subscriptions */
   public void subscribe(DirectoryWatcherSubscriber subscriber) {
     subscribers.add(subscriber);
   }
@@ -69,8 +103,6 @@ public class DirectoryWatcher {
   }
 
   private Pattern compileFilter(String filter) {
-    System.out.println("\nFilter: " + filter);
-
     if (filter.endsWith("/") || filter.endsWith("\\")) {
       filter = filter + "**";
     }
@@ -99,19 +131,15 @@ public class DirectoryWatcher {
     }
 
     pattern.append("$");
-
-    Pattern result = Pattern.compile(pattern.toString());
-    System.out.println(result);
-
-    return result;
+    return Pattern.compile(pattern.toString());
   }
 
   /* Filter Checking */
   public boolean shouldTrack(Path path) {
-    return isTracking(path.toString());
+    return shouldTrack(path.toString());
   }
 
-  public boolean isTracking(String path) {
+  public boolean shouldTrack(String path) {
     return shouldInclude(path) && !shouldExclude(path);
   }
 
@@ -143,4 +171,97 @@ public class DirectoryWatcher {
     return false;
   }
 
+  /* Handlers */
+  void directoryCreated(final WatchKey parent, Path dir) throws IOException {
+    if (!dirs.contains(parent)) {
+      return;
+    }
+
+    // if a new dir is created we need to register it to our watcher
+    // else inner events won't be tracked. In some cases, we may only
+    // receive an event for the top level dir: any further nested dir
+    // will not have any event as we haven't registered them. We'll
+    // need to manually traverse and make sure we got them too.
+    Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
+      @Override
+      public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+        if (!shouldTrack(dir)) {
+          return FileVisitResult.CONTINUE;
+        }
+
+        register(dir, watcher);
+
+        for (DirectoryWatcherSubscriber sub : subscribers) {
+          sub.directoryCreated(DirectoryWatcher.this, dir);
+        }
+
+        return FileVisitResult.CONTINUE;
+      }
+
+      @Override
+      public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+        fileCreated(parent, file);
+        return FileVisitResult.CONTINUE;
+      }
+    });
+  }
+
+  void directoryDeleted(WatchKey deletedDir) {
+    if (!dirs.contains(deletedDir)) {
+      return;
+    }
+
+    Path dir = (Path) deletedDir.watchable();
+    if (!shouldTrack(dir)) {
+      return;
+    }
+
+    dirs.remove(deletedDir);
+
+    for (DirectoryWatcherSubscriber sub : subscribers) {
+      sub.directoryDeleted(this, dir);
+    }
+  }
+
+  void fileCreated(WatchKey parent, Path file) {
+    if (!dirs.contains(parent)) {
+      return;
+    }
+
+    if (!shouldTrack(file)) {
+      return;
+    }
+
+    for (DirectoryWatcherSubscriber sub : subscribers) {
+      sub.fileCreated(this, file);
+    }
+  }
+
+  void fileModified(WatchKey parent, Path file) {
+    if (!dirs.contains(parent)) {
+      return;
+    }
+
+    if (!shouldTrack(file)) {
+      return;
+    }
+
+    for (DirectoryWatcherSubscriber sub : subscribers) {
+      sub.fileModified(this, file);
+    }
+  }
+
+  void fileDeleted(WatchKey parent, Path file) {
+    if (!dirs.contains(parent)) {
+      return;
+    }
+
+    if (!shouldTrack(file)) {
+      return;
+    }
+
+    for (DirectoryWatcherSubscriber sub : subscribers) {
+      sub.fileDeleted(this, file);
+    }
+  }
 }

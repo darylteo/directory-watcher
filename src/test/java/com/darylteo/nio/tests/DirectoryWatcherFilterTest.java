@@ -142,6 +142,18 @@ public class DirectoryWatcherFilterTest {
 
   @Test
   public void testIncludes10() throws InterruptedException, IOException {
+    watcher.include("foo/**");
+
+    assertFalse(watcher.shouldTrack(Paths.get("file")));
+    assertFalse(watcher.shouldTrack(Paths.get("file.json")));
+    assertFalse(watcher.shouldTrack(Paths.get("foo")));
+    assertTrue(watcher.shouldTrack(Paths.get("foo/file")));
+    assertTrue(watcher.shouldTrack(Paths.get("foo/file.json")));
+    assertTrue(watcher.shouldTrack(Paths.get("foo/bar/file.json")));
+  }
+
+  @Test
+  public void testIncludes11() throws InterruptedException, IOException {
     watcher.include("foo/**/*.json");
 
     assertFalse(watcher.shouldTrack(Paths.get("file")));
@@ -152,7 +164,7 @@ public class DirectoryWatcherFilterTest {
   }
 
   @Test
-  public void testIncludes11() throws InterruptedException, IOException {
+  public void testIncludes12() throws InterruptedException, IOException {
     watcher.include("**/bar/*.json");
 
     assertFalse(watcher.shouldTrack(Paths.get("file")));
@@ -163,7 +175,7 @@ public class DirectoryWatcherFilterTest {
   }
 
   @Test
-  public void testIncludes12() throws InterruptedException, IOException {
+  public void testIncludes13() throws InterruptedException, IOException {
     watcher.include("**/foo/**/bar/*.json");
 
     assertFalse(watcher.shouldTrack(Paths.get("file")));

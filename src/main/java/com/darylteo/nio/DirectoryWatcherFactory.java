@@ -1,18 +1,14 @@
 package com.darylteo.nio;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.ClosedWatchServiceException;
 import java.nio.file.FileSystems;
-import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -20,28 +16,11 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import com.sun.nio.file.ExtendedWatchEventModifier;
-import com.sun.nio.file.SensitivityWatchEventModifier;
-
 public class DirectoryWatcherFactory implements AutoCloseable {
   private final WatchService watchService = FileSystems.getDefault().newWatchService();
   private final ExecutorService executorService = Executors.newCachedThreadPool();
 
   /* WatchService Modifiers */
-  private boolean isFileTreeModifierSupported = true;
-  private final WatchEvent.Modifier[] FILETREE_MODIFIERS = new WatchEvent.Modifier[] {
-    ExtendedWatchEventModifier.FILE_TREE
-  };
-  private final WatchEvent.Modifier[] POLLING_MODIFIERS = new WatchEvent.Modifier[] {
-    SensitivityWatchEventModifier.HIGH
-  };
-  private WatchEvent.Modifier[] modifiers = FILETREE_MODIFIERS;
-  private WatchEvent.Kind<?> WATCH_EVENTS[] = new WatchEvent.Kind<?>[] {
-    StandardWatchEventKinds.ENTRY_CREATE,
-    StandardWatchEventKinds.ENTRY_DELETE,
-    StandardWatchEventKinds.ENTRY_MODIFY
-  };
-
   private Set<Path> dirs = new HashSet<>();
 
   /* Watcher Mapping */
@@ -58,8 +37,8 @@ public class DirectoryWatcherFactory implements AutoCloseable {
   }
 
   public DirectoryWatcher newWatcher(Path dir) throws IOException {
-    DirectoryWatcher watcher = new DirectoryWatcher(dir);
-    addWatcher(watcher);
+    DirectoryWatcher watcher = new DirectoryWatcher(watchService, dir);
+    watchers.add(watcher);
 
     return watcher;
   }
@@ -68,47 +47,6 @@ public class DirectoryWatcherFactory implements AutoCloseable {
   public void close() throws Exception {
     watchService.close();
     executorService.shutdown();
-  }
-
-  /* Private Methods */
-  private void addWatcher(final DirectoryWatcher watcher) throws IOException {
-    Path path = watcher.getPath();
-
-    if (!Files.exists(path)) {
-      throw new FileNotFoundException(path.toString());
-    }
-
-    // passed the FILE_TREE supported test
-    Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
-      @Override
-      public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-        registerPath(watcher, dir);
-        dirs.add(dir);
-        return FileVisitResult.CONTINUE;
-      }
-    });
-
-    watchers.add(watcher);
-  }
-
-  private boolean registerPath(DirectoryWatcher watcher, Path path) throws IOException {
-    if (!watcher.shouldTrack(path)) {
-      return false;
-    }
-
-    try {
-      WatchKey key = path.register(watchService, WATCH_EVENTS, modifiers);
-      watcher.watch(key);
-
-      return true;
-    } catch (UnsupportedOperationException e) {
-      /* FILE_TREE modifier not supported */
-      /* this code should only fire once since we modify the modifiers here */
-      isFileTreeModifierSupported = false;
-      modifiers = POLLING_MODIFIERS;
-
-      return registerPath(watcher, path);
-    }
   }
 
   /*
@@ -156,8 +94,6 @@ public class DirectoryWatcherFactory implements AutoCloseable {
       Path dir = (Path) key.watchable();
       Path path = dir.resolve(event.context());
 
-      System.out.println(this + " > " + kind + " Received. Root: " + dir + " Path: " + path);
-
       /* ENTRY_CREATE */
       if (kind == StandardWatchEventKinds.ENTRY_CREATE) {
         if (Files.isDirectory(path)) {
@@ -191,88 +127,35 @@ public class DirectoryWatcherFactory implements AutoCloseable {
       handleFileDeleted(key, path);
     }
 
-    private void handleDirectoryDeleted(WatchKey key, Path dir) throws IOException {
+    private void handleDirectoryCreated(final WatchKey key, Path dir) throws IOException {
+      dirs.add(dir);
       for (DirectoryWatcher watcher : watchers) {
-        if (!watcher.isWatching(key) || !watcher.shouldTrack(dir)) {
-          continue;
-        }
-
-        dirs.remove(dir);
-
-        for (DirectoryWatcherSubscriber s : watcher.getSubscribers()) {
-          s.directoryDeleted(watcher, dir);
-        }
+        watcher.directoryCreated(key, dir);
       }
-
-      return;
     }
 
-    private void handleDirectoryCreated(final WatchKey key, Path dir) throws IOException {
-      // if a new dir is created we need to register it to our watcher
-      // else inner events won't be tracked. In some cases, we may only
-      // receive an event for the top level dir: any further nested dir
-      // will not have any event as we haven't registered them. We'll
-      // need to manually traverse and make sure we got them too.
-      Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
-        @Override
-        public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-          for (DirectoryWatcher watcher : watchers) {
-            if (!watcher.isWatching(key) || !watcher.shouldTrack(dir)) {
-              continue;
-            }
-
-            registerPath(watcher, dir);
-
-            for (DirectoryWatcherSubscriber s : watcher.getSubscribers()) {
-              s.directoryCreated(watcher, dir);
-            }
-          }
-
-          return FileVisitResult.CONTINUE;
-        }
-
-        @Override
-        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-          handleFileCreated(key, file);
-
-          return FileVisitResult.CONTINUE;
-        }
-      });
+    private void handleDirectoryDeleted(WatchKey key, Path dir) throws IOException {
+      dirs.remove(dir);
+      for (DirectoryWatcher watcher : watchers) {
+        watcher.directoryDeleted(key);
+      }
     }
 
     private void handleFileCreated(WatchKey key, Path file) throws IOException {
       for (DirectoryWatcher watcher : watchers) {
-        if (!watcher.isWatching(key) || !watcher.shouldTrack(file)) {
-          continue;
-        }
-
-        for (DirectoryWatcherSubscriber s : watcher.getSubscribers()) {
-          s.fileCreated(watcher, file);
-        }
+        watcher.fileCreated(key, file);
       }
     }
 
     private void handleFileDeleted(WatchKey key, Path file) {
       for (DirectoryWatcher watcher : watchers) {
-        if (!watcher.isWatching(key) || !watcher.shouldTrack(file)) {
-          continue;
-        }
-
-        for (DirectoryWatcherSubscriber s : watcher.getSubscribers()) {
-          s.fileDeleted(watcher, file);
-        }
+        watcher.fileDeleted(key, file);
       }
     }
 
     private void handleFileModified(WatchKey key, Path file) {
       for (DirectoryWatcher watcher : watchers) {
-        if (!watcher.isWatching(key) || !watcher.shouldTrack(file)) {
-          continue;
-        }
-
-        for (DirectoryWatcherSubscriber s : watcher.getSubscribers()) {
-          s.fileModified(watcher, file);
-        }
+        watcher.fileModified(key, file);
       }
     }
   }
