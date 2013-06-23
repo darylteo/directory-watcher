@@ -30,7 +30,7 @@ public class DirectoryWatcherTest {
   private DirectoryWatcher watcher;
   private Path root = Paths.get("watcher_test");
 
-  private static final int LATCH_TIMEOUT = 15;
+  private static final int LATCH_TIMEOUT = 1500;
 
   @Before
   public void before() throws IOException {
@@ -85,7 +85,7 @@ public class DirectoryWatcherTest {
   @Test
   public void testCreateDirectory1() throws InterruptedException, IOException {
     final CountDownLatch latch = new CountDownLatch(1);
-    final Path newPath = root.resolve("newdir");
+    final Path newPath = Paths.get("newdir");
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
@@ -95,7 +95,7 @@ public class DirectoryWatcherTest {
       }
     });
 
-    Files.createDirectories(newPath);
+    Files.createDirectories(root.resolve(newPath));
 
     latch.await(LATCH_TIMEOUT, TimeUnit.SECONDS);
     assertEquals("Test timed out", 0, latch.getCount());
@@ -105,8 +105,8 @@ public class DirectoryWatcherTest {
   public void testCreateDirectory2() throws InterruptedException, IOException {
     final CountDownLatch latch = new CountDownLatch(2);
     final Set<Path> paths = new HashSet<>();
-    paths.add(root.resolve("newdir1"));
-    paths.add(root.resolve("newdir1/newdir2"));
+    paths.add(Paths.get("newdir1"));
+    paths.add(Paths.get("newdir1/newdir2"));
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
@@ -126,7 +126,7 @@ public class DirectoryWatcherTest {
   public void testDeleteDirectory1() throws InterruptedException, IOException {
     /* Basic Deletion Test */
     final CountDownLatch latch = new CountDownLatch(1);
-    final Path deletePath = root.resolve("empty1/empty2");
+    final Path deletePath = Paths.get("empty1/empty2");
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
@@ -136,7 +136,7 @@ public class DirectoryWatcherTest {
       }
     });
 
-    Files.delete(deletePath);
+    Files.delete(root.resolve(deletePath));
 
     latch.await(LATCH_TIMEOUT, TimeUnit.SECONDS);
     assertEquals("Test timed out", 0, latch.getCount());
@@ -148,8 +148,8 @@ public class DirectoryWatcherTest {
     final CountDownLatch latch = new CountDownLatch(2);
 
     final Set<Path> paths = new HashSet<>();
-    paths.add(root.resolve("empty1/empty2"));
-    paths.add(root.resolve("empty1"));
+    paths.add(Paths.get("empty1/empty2"));
+    paths.add(Paths.get("empty1"));
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
@@ -169,7 +169,7 @@ public class DirectoryWatcherTest {
   public void testDeleteFile1() throws IOException, InterruptedException {
     /* Delete a file in root */
     final CountDownLatch latch = new CountDownLatch(1);
-    final Path deletePath = root.resolve("file");
+    final Path deletePath = Paths.get("file");
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
@@ -179,7 +179,7 @@ public class DirectoryWatcherTest {
       }
     });
 
-    Files.delete(deletePath);
+    Files.delete(root.resolve(deletePath));
 
     latch.await(LATCH_TIMEOUT, TimeUnit.SECONDS);
     assertEquals("Test timed out", 0, latch.getCount());
@@ -189,7 +189,7 @@ public class DirectoryWatcherTest {
   public void testDeleteFile2() throws IOException, InterruptedException {
     /* Delete a file deep in hierarchy */
     final CountDownLatch latch = new CountDownLatch(1);
-    final Path deletePath = root.resolve("level1/level2/file");
+    final Path deletePath = Paths.get("level1/level2/file");
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
@@ -199,7 +199,7 @@ public class DirectoryWatcherTest {
       }
     });
 
-    Files.delete(deletePath);
+    Files.delete(root.resolve(deletePath));
 
     latch.await(LATCH_TIMEOUT, TimeUnit.SECONDS);
     assertEquals("Test timed out", 0, latch.getCount());
@@ -210,9 +210,9 @@ public class DirectoryWatcherTest {
     /* Delete multiple files */
     final CountDownLatch latch = new CountDownLatch(1);
     final Set<Path> paths = new HashSet<>();
-    paths.add(root.resolve("file"));
-    paths.add(root.resolve("level1/file"));
-    paths.add(root.resolve("level1/level2/file"));
+    paths.add(Paths.get("file"));
+    paths.add(Paths.get("level1/file"));
+    paths.add(Paths.get("level1/level2/file"));
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
@@ -223,7 +223,7 @@ public class DirectoryWatcherTest {
     });
 
     for (Path p : paths) {
-      Files.delete(p);
+      Files.delete(root.resolve(p));
     }
 
     latch.await(LATCH_TIMEOUT, TimeUnit.SECONDS);
@@ -234,7 +234,7 @@ public class DirectoryWatcherTest {
   public void testFileModified1() throws IOException, InterruptedException {
     /* Modify a single file in root */
     final CountDownLatch latch = new CountDownLatch(1);
-    final Path modifyPath = root.resolve("file");
+    final Path modifyPath = Paths.get("file");
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
@@ -246,7 +246,7 @@ public class DirectoryWatcherTest {
 
     // Need this to give the polling mechanism time to hook into events
     Thread.sleep(1000);
-    writeToFile(modifyPath);
+    writeToFile(root.resolve(modifyPath));
 
     latch.await(LATCH_TIMEOUT, TimeUnit.SECONDS);
     assertEquals("Test timed out", 0, latch.getCount());
@@ -257,9 +257,9 @@ public class DirectoryWatcherTest {
     /* Modify multiple files */
     final CountDownLatch latch = new CountDownLatch(3);
     final Set<Path> paths = new HashSet<>();
-    paths.add(root.resolve("file"));
-    paths.add(root.resolve("level1/file"));
-    paths.add(root.resolve("level1/level2/file"));
+    paths.add(Paths.get("file"));
+    paths.add(Paths.get("level1/file"));
+    paths.add(Paths.get("level1/level2/file"));
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
@@ -272,7 +272,7 @@ public class DirectoryWatcherTest {
     // Need this to give the polling mechanism time to hook into events
     Thread.sleep(1000);
     for (Path p : paths) {
-      writeToFile(p);
+      writeToFile(root.resolve(p));
     }
 
     latch.await(LATCH_TIMEOUT, TimeUnit.SECONDS);

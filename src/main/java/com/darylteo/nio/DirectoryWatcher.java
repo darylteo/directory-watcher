@@ -3,6 +3,7 @@ package com.darylteo.nio;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
+import java.nio.file.FileVisitor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
@@ -37,7 +38,7 @@ public class DirectoryWatcher {
 
   /* Constructors */
   DirectoryWatcher(final WatchService watcher, final Path path) throws IOException {
-    this.path = path;
+    this.path = path.toAbsolutePath();
     this.watcher = watcher;
 
     Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
@@ -55,7 +56,11 @@ public class DirectoryWatcher {
   }
 
   /* WatchService */
-  private void register(final Path path, final WatchService watcher) throws IOException {
+  private void register(Path path, final WatchService watcher) throws IOException {
+    if (!path.isAbsolute()) {
+      path = path.toAbsolutePath();
+    }
+
     dirs.add(path.register(
       watcher,
       new WatchEvent.Kind<?>[] {
@@ -78,19 +83,6 @@ public class DirectoryWatcher {
 
   public void unsubscribe(DirectoryWatcherSubscriber subscriber) {
     subscribers.remove(subscriber);
-  }
-
-  /* WatchKeys */
-  boolean watch(WatchKey key) {
-    return this.dirs.add(key);
-  }
-
-  boolean unwatch(WatchKey key) {
-    return this.dirs.remove(key);
-  }
-
-  boolean isWatching(WatchKey key) {
-    return dirs.contains(key);
   }
 
   /* Filters */
@@ -172,96 +164,113 @@ public class DirectoryWatcher {
   }
 
   /* Handlers */
-  void directoryCreated(final WatchKey parent, Path dir) throws IOException {
-    if (!dirs.contains(parent)) {
+  void handleCreateEvent(WatchKey key, Path path) {
+    if (!isTrackingKey(key)) {
       return;
     }
+
+    path = actualPath(key, path);
 
     // if a new dir is created we need to register it to our watcher
     // else inner events won't be tracked. In some cases, we may only
     // receive an event for the top level dir: any further nested dir
     // will not have any event as we haven't registered them. We'll
     // need to manually traverse and make sure we got them too.
-    Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
-      @Override
-      public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-        if (!shouldTrack(dir)) {
+    if (Files.isDirectory(path)) {
+      FileVisitor<Path> visitor = new SimpleFileVisitor<Path>() {
+        @Override
+        public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+          dir = relativePath(dir);
+          directoryCreated(dir);
+
           return FileVisitResult.CONTINUE;
         }
 
-        register(dir, watcher);
+        @Override
+        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+          file = relativePath(file);
+          fileCreated(file);
 
-        for (DirectoryWatcherSubscriber sub : subscribers) {
-          sub.directoryCreated(DirectoryWatcher.this, dir);
+          return FileVisitResult.CONTINUE;
         }
+      };
 
-        return FileVisitResult.CONTINUE;
+      try {
+        Files.walkFileTree(path, visitor);
+      } catch (IOException e) {
       }
-
-      @Override
-      public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-        fileCreated(parent, file);
-        return FileVisitResult.CONTINUE;
-      }
-    });
+    }
   }
 
-  void directoryDeleted(WatchKey deletedDir) {
-    if (!dirs.contains(deletedDir)) {
+  void handleModifyEvent(WatchKey key, Path path) {
+    if (!isTrackingKey(key)) {
       return;
     }
 
-    Path dir = (Path) deletedDir.watchable();
-    if (!shouldTrack(dir)) {
+    path = actualPath(key, path);
+    if (Files.isDirectory(path)) {
       return;
     }
 
-    dirs.remove(deletedDir);
+    fileModified(relativePath(path));
+  }
 
+  void handleDeleteEvent(WatchKey key, Path path) {
+    if (!isTrackingKey(key)) {
+      return;
+    }
+
+    path = actualPath(key, path);
+    /* TODO :Detect directories */
+
+    fileDeleted(relativePath(path));
+  }
+
+  void handleKeyInvalid(WatchKey key) {
+    if (!isTrackingKey(key)) {
+      return;
+    }
+  }
+
+  void directoryCreated(Path dir) throws IOException {
+    for (DirectoryWatcherSubscriber sub : subscribers) {
+      sub.directoryCreated(DirectoryWatcher.this, dir);
+    }
+  }
+
+  void directoryDeleted(Path dir) {
     for (DirectoryWatcherSubscriber sub : subscribers) {
       sub.directoryDeleted(this, dir);
     }
   }
 
-  void fileCreated(WatchKey parent, Path file) {
-    if (!dirs.contains(parent)) {
-      return;
-    }
-
-    if (!shouldTrack(file)) {
-      return;
-    }
-
+  void fileCreated(Path file) {
     for (DirectoryWatcherSubscriber sub : subscribers) {
       sub.fileCreated(this, file);
     }
   }
 
-  void fileModified(WatchKey parent, Path file) {
-    if (!dirs.contains(parent)) {
-      return;
-    }
-
-    if (!shouldTrack(file)) {
-      return;
-    }
-
+  void fileModified(Path file) {
     for (DirectoryWatcherSubscriber sub : subscribers) {
       sub.fileModified(this, file);
     }
   }
 
-  void fileDeleted(WatchKey parent, Path file) {
-    if (!dirs.contains(parent)) {
-      return;
-    }
-
-    if (!shouldTrack(file)) {
-      return;
-    }
-
+  void fileDeleted(Path file) {
     for (DirectoryWatcherSubscriber sub : subscribers) {
       sub.fileDeleted(this, file);
     }
+  }
+
+  private boolean isTrackingKey(WatchKey key) {
+    return dirs.contains(key);
+  }
+
+  private Path actualPath(WatchKey key, Path path) {
+    return ((Path) key.watchable()).resolve(path);
+  }
+
+  private Path relativePath(Path path) {
+    return this.path.relativize(path);
   }
 }
