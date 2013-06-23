@@ -262,6 +262,8 @@ public class DirectoryWatcher {
       return;
     }
 
+    System.out.println("Deleted Entry: " + entry);
+
     for (DirectoryWatcherSubscriber sub : subscribers) {
       sub.entryDeleted(this, entry);
     }

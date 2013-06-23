@@ -30,7 +30,8 @@ public class DirectoryWatcherTest {
   private DirectoryWatcher watcher;
   private Path root = Paths.get("watcher_test");
 
-  private static final int LATCH_TIMEOUT = 4;
+  private static final int LATCH_TIMEOUT = 10;
+  private CountDownLatch latch;
 
   @Before
   public void before() throws IOException {
@@ -45,6 +46,34 @@ public class DirectoryWatcherTest {
   @After
   public void after() throws Exception {
     factory.close();
+    System.out.println("\nTest Complete");
+  }
+
+  private void initLatch(int count) {
+    latch = new CountDownLatch(count);
+  }
+
+  private void countdown() {
+    synchronized (this) {
+      latch.countDown();
+      this.notifyAll();
+    }
+  }
+
+  private void awaitLatch() {
+    synchronized (this) {
+      while (true) {
+        try {
+          if (latch.getCount() == 0) {
+            return;
+          }
+          this.wait();
+        } catch (InterruptedException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        }
+      }
+    }
   }
 
   public void resetTestFolder(Path root) throws IOException {
@@ -80,166 +109,163 @@ public class DirectoryWatcherTest {
     Files.createFile(root.resolve("file"));
     Files.createFile(root.resolve("level1/file"));
     Files.createFile(root.resolve("level1/level2/file"));
+
+    try {
+      Thread.sleep(1000);
+    } catch (InterruptedException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
   }
 
   @Test
   public void testCreateDirectory1() throws InterruptedException, IOException {
-    final CountDownLatch latch = new CountDownLatch(1);
     final Path newPath = Paths.get("newdir");
+    initLatch(1);
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
       public void entryCreated(DirectoryWatcher watcher, Path dir) {
         assertEquals("Two absolute paths are not equal", newPath, dir);
-        latch.countDown();
+        countdown();
       }
     });
 
     Files.createDirectories(root.resolve(newPath));
-
-    latch.await(LATCH_TIMEOUT, TimeUnit.SECONDS);
-    assertEquals("Test timed out", 0, latch.getCount());
+    awaitLatch();
   }
 
   @Test
   public void testCreateDirectory2() throws InterruptedException, IOException {
-    final CountDownLatch latch = new CountDownLatch(2);
     final Set<Path> paths = new HashSet<>();
     paths.add(Paths.get("newdir1"));
     paths.add(Paths.get("newdir1/newdir2"));
+
+    initLatch(2);
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
       public void entryCreated(DirectoryWatcher watcher, Path dir) {
         assertTrue("Watcher did not return a correct path", paths.remove(dir));
-        latch.countDown();
+        countdown();
       }
     });
 
     Files.createDirectories(root.resolve("newdir1/newdir2"));
-
-    latch.await(LATCH_TIMEOUT, TimeUnit.SECONDS);
-    assertEquals("Test timed out", 0, latch.getCount());
+    awaitLatch();
   }
 
   @Test
   public void testDeleteDirectory1() throws InterruptedException, IOException {
     /* Basic Deletion Test */
-    final CountDownLatch latch = new CountDownLatch(1);
     final Path deletePath = Paths.get("empty1/empty2");
+    initLatch(1);
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
       public void entryDeleted(DirectoryWatcher watcher, Path file) {
         assertEquals("Watcher did not return a correct path", deletePath, file);
-        latch.countDown();
+        countdown();
       }
     });
 
     Files.delete(root.resolve(deletePath));
-
-    latch.await(LATCH_TIMEOUT, TimeUnit.SECONDS);
-    assertEquals("Test timed out", 0, latch.getCount());
+    awaitLatch();
   }
 
   @Test
   public void testDeleteDirectory2() throws InterruptedException, IOException {
     /* Nested Deletion Test */
-    final CountDownLatch latch = new CountDownLatch(1);
-
     final Set<Path> paths = new HashSet<>();
     paths.add(Paths.get("empty1"));
+
+    initLatch(1);
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
       public void entryDeleted(DirectoryWatcher watcher, Path file) {
         assertTrue("Watcher did not return a correct path", paths.remove(file));
-        latch.countDown();
+        countdown();
       }
     });
 
     deleteFileTree(root.resolve("empty1"));
-
-    latch.await(LATCH_TIMEOUT, TimeUnit.SECONDS);
-    assertEquals("Test timed out", 0, latch.getCount());
+    awaitLatch();
   }
 
   @Test
   public void testDeleteDirectory3() throws InterruptedException, IOException {
     /* Nested Deletion Test */
-    final CountDownLatch latch = new CountDownLatch(1);
-
     final Set<Path> paths = new HashSet<>();
     paths.add(Paths.get("level1"));
+
+    initLatch(1);
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
       public void entryDeleted(DirectoryWatcher watcher, Path file) {
         assertTrue("Watcher did not return a correct path", paths.remove(file));
-        latch.countDown();
+        countdown();
       }
     });
 
     deleteFileTree(root.resolve("level1"));
-
-    latch.await(LATCH_TIMEOUT, TimeUnit.SECONDS);
-    assertEquals("Test timed out", 0, latch.getCount());
+    awaitLatch();
   }
 
   @Test
   public void testDeleteFile1() throws IOException, InterruptedException {
     /* Delete a file in root */
-    final CountDownLatch latch = new CountDownLatch(1);
     final Path deletePath = Paths.get("file");
+
+    initLatch(1);
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
       public void entryDeleted(DirectoryWatcher watcher, Path file) {
         assertEquals("Watcher did not return a correct path", deletePath, file);
-        latch.countDown();
+        countdown();
       }
     });
 
     Files.delete(root.resolve(deletePath));
-
-    latch.await(LATCH_TIMEOUT, TimeUnit.SECONDS);
-    assertEquals("Test timed out", 0, latch.getCount());
+    awaitLatch();
   }
 
   @Test
   public void testDeleteFile2() throws IOException, InterruptedException {
     /* Delete a file deep in hierarchy */
-    final CountDownLatch latch = new CountDownLatch(1);
     final Path deletePath = Paths.get("level1/level2/file");
+
+    initLatch(1);
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
       public void entryDeleted(DirectoryWatcher watcher, Path file) {
         assertEquals("Watcher did not return a correct path", deletePath, file);
-        latch.countDown();
+        countdown();
       }
     });
 
     Files.delete(root.resolve(deletePath));
-
-    latch.await(LATCH_TIMEOUT, TimeUnit.SECONDS);
-    assertEquals("Test timed out", 0, latch.getCount());
+    awaitLatch();
   }
 
   @Test
   public void testDeleteFile3() throws IOException, InterruptedException {
     /* Delete multiple files */
-    final CountDownLatch latch = new CountDownLatch(1);
     final Set<Path> paths = new HashSet<>();
     paths.add(Paths.get("file"));
     paths.add(Paths.get("level1/file"));
     paths.add(Paths.get("level1/level2/file"));
 
+    initLatch(3);
+
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
       public void entryDeleted(DirectoryWatcher watcher, Path file) {
         assertTrue("Watcher did not return a correct path", paths.remove(file));
-        latch.countDown();
+        countdown();
       }
     });
 
@@ -247,46 +273,43 @@ public class DirectoryWatcherTest {
       Files.delete(root.resolve(p));
     }
 
-    latch.await(LATCH_TIMEOUT, TimeUnit.SECONDS);
-    assertEquals("Test timed out", 0, latch.getCount());
+    awaitLatch();
   }
 
   @Test
   public void testFileModified1() throws IOException, InterruptedException {
     /* Modify a single file in root */
-    final CountDownLatch latch = new CountDownLatch(1);
     final Path modifyPath = Paths.get("file");
+
+    initLatch(1);
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
       public void entryModified(DirectoryWatcher watcher, Path file) {
         assertEquals("Watcher did not return a correct path", modifyPath, file);
-        latch.countDown();
+        countdown();
       }
     });
 
-    // Need this to give the polling mechanism time to hook into events
-    Thread.sleep(1000);
     writeToFile(root.resolve(modifyPath));
-
-    latch.await(LATCH_TIMEOUT, TimeUnit.SECONDS);
-    assertEquals("Test timed out", 0, latch.getCount());
+    awaitLatch();
   }
 
   @Test
   public void testFileModified2() throws IOException, InterruptedException {
     /* Modify multiple files */
-    final CountDownLatch latch = new CountDownLatch(3);
     final Set<Path> paths = new HashSet<>();
     paths.add(Paths.get("file"));
     paths.add(Paths.get("level1/file"));
     paths.add(Paths.get("level1/level2/file"));
 
+    initLatch(3);
+
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
       public void entryModified(DirectoryWatcher watcher, Path file) {
         assertTrue("Watcher did not return a correct path", paths.remove(file));
-        latch.countDown();
+        countdown();
       }
     });
 
@@ -296,24 +319,29 @@ public class DirectoryWatcherTest {
       writeToFile(root.resolve(p));
     }
 
-    latch.await(LATCH_TIMEOUT, TimeUnit.SECONDS);
-    assertEquals("Test timed out", 0, latch.getCount());
+    awaitLatch();
   }
 
-  private void deleteFileTree(Path path) throws IOException {
-    Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
-      @Override
-      public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-        Files.delete(file);
-        return FileVisitResult.CONTINUE;
-      }
+  private void deleteFileTree(final Path path) {
+    try {
+      Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+        @Override
+        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+          Files.delete(file);
+          return FileVisitResult.CONTINUE;
+        }
 
-      @Override
-      public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-        Files.delete(dir);
-        return FileVisitResult.CONTINUE;
-      }
-    });
+        @Override
+        public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+          Files.delete(dir);
+          return FileVisitResult.CONTINUE;
+        }
+
+      });
+    } catch (IOException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
   }
 
   private void writeToFile(Path path) throws IOException {
