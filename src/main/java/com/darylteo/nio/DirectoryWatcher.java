@@ -6,6 +6,7 @@ import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
@@ -13,9 +14,12 @@ import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -35,7 +39,6 @@ public class DirectoryWatcher {
 
   /* Used to determine watch status */
   private final Set<WatchKey> keys = new HashSet<>();
-  private final Set<Path> dirs = new HashSet<>();
 
   /* Constructors */
   DirectoryWatcher(final WatchService watcher, final Path path) throws IOException {
@@ -69,13 +72,10 @@ public class DirectoryWatcher {
       },
       new WatchEvent.Modifier[] { SensitivityWatchEventModifier.HIGH }
       ));
-
-    dirs.add(path);
   }
 
-  private void deregister(WatchKey key, Path path) {
+  private void deregister(WatchKey key) {
     keys.remove(key);
-    dirs.remove(path);
   }
 
   /* Subscriptions */
@@ -186,16 +186,15 @@ public class DirectoryWatcher {
       FileVisitor<Path> visitor = new SimpleFileVisitor<Path>() {
         @Override
         public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-          dir = relativePath(dir);
-          directoryCreated(dir);
+          register(dir, watcher);
 
+          entryCreated(dir);
           return FileVisitResult.CONTINUE;
         }
 
         @Override
         public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-          file = relativePath(file);
-          fileCreated(file);
+          entryCreated(file);
 
           return FileVisitResult.CONTINUE;
         }
@@ -213,12 +212,7 @@ public class DirectoryWatcher {
       return;
     }
 
-    path = actualPath(key, path);
-    if (Files.isDirectory(path)) {
-      return;
-    }
-
-    fileModified(relativePath(path));
+    entryModified(actualPath(key, path));
   }
 
   void handleDeleteEvent(WatchKey key, Path path) {
@@ -226,14 +220,7 @@ public class DirectoryWatcher {
       return;
     }
 
-    path = actualPath(key, path);
-
-    // ignore directories
-    if (dirs.contains(path)) {
-      return;
-    }
-
-    fileDeleted(relativePath(path));
+    entryDeleted(actualPath(key, path));
   }
 
   void handleKeyInvalid(WatchKey key) {
@@ -241,37 +228,42 @@ public class DirectoryWatcher {
       return;
     }
 
-    Path dir = relativePath(((Path) key.watchable()));
-    directoryDeleted(dir);
+    deregister(key);
   }
 
-  void directoryCreated(Path dir) throws IOException {
+  void entryCreated(Path entry) throws IOException {
+    entry = relativePath(entry);
+
+    if (!shouldTrack(entry)) {
+      return;
+    }
+
     for (DirectoryWatcherSubscriber sub : subscribers) {
-      sub.directoryCreated(DirectoryWatcher.this, dir);
+      sub.entryCreated(DirectoryWatcher.this, entry);
     }
   }
 
-  void directoryDeleted(Path dir) {
+  void entryModified(Path entry) {
+    entry = relativePath(entry);
+
+    if (!shouldTrack(entry)) {
+      return;
+    }
+
     for (DirectoryWatcherSubscriber sub : subscribers) {
-      sub.directoryDeleted(this, dir);
+      sub.entryModified(this, entry);
     }
   }
 
-  void fileCreated(Path file) {
-    for (DirectoryWatcherSubscriber sub : subscribers) {
-      sub.fileCreated(this, file);
-    }
-  }
+  void entryDeleted(Path entry) {
+    entry = relativePath(entry);
 
-  void fileModified(Path file) {
-    for (DirectoryWatcherSubscriber sub : subscribers) {
-      sub.fileModified(this, file);
+    if (!shouldTrack(entry)) {
+      return;
     }
-  }
 
-  void fileDeleted(Path file) {
     for (DirectoryWatcherSubscriber sub : subscribers) {
-      sub.fileDeleted(this, file);
+      sub.entryDeleted(this, entry);
     }
   }
 
@@ -280,6 +272,9 @@ public class DirectoryWatcher {
   }
 
   private Path actualPath(WatchKey key, Path path) {
+    if (path == null) {
+      path = Paths.get("");
+    }
     return ((Path) key.watchable()).resolve(path);
   }
 

@@ -2,7 +2,6 @@ package com.darylteo.nio.tests;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
@@ -31,7 +30,7 @@ public class DirectoryWatcherTest {
   private DirectoryWatcher watcher;
   private Path root = Paths.get("watcher_test");
 
-  private static final int LATCH_TIMEOUT = 1500;
+  private static final int LATCH_TIMEOUT = 4;
 
   @Before
   public void before() throws IOException {
@@ -90,7 +89,7 @@ public class DirectoryWatcherTest {
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
-      public void directoryCreated(DirectoryWatcher watcher, Path dir) {
+      public void entryCreated(DirectoryWatcher watcher, Path dir) {
         assertEquals("Two absolute paths are not equal", newPath, dir);
         latch.countDown();
       }
@@ -111,7 +110,7 @@ public class DirectoryWatcherTest {
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
-      public void directoryCreated(DirectoryWatcher watcher, Path dir) {
+      public void entryCreated(DirectoryWatcher watcher, Path dir) {
         assertTrue("Watcher did not return a correct path", paths.remove(dir));
         latch.countDown();
       }
@@ -131,13 +130,8 @@ public class DirectoryWatcherTest {
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
-      public void fileDeleted(DirectoryWatcher watcher, Path file) {
-        fail("Should not occur");
-      }
-
-      @Override
-      public void directoryDeleted(DirectoryWatcher watcher, Path dir) {
-        assertEquals("Watcher did not return a correct path", deletePath, dir);
+      public void entryDeleted(DirectoryWatcher watcher, Path file) {
+        assertEquals("Watcher did not return a correct path", deletePath, file);
         latch.countDown();
       }
     });
@@ -151,26 +145,42 @@ public class DirectoryWatcherTest {
   @Test
   public void testDeleteDirectory2() throws InterruptedException, IOException {
     /* Nested Deletion Test */
-    final CountDownLatch latch = new CountDownLatch(2);
+    final CountDownLatch latch = new CountDownLatch(1);
 
     final Set<Path> paths = new HashSet<>();
-    paths.add(Paths.get("empty1/empty2"));
     paths.add(Paths.get("empty1"));
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
-      public void fileDeleted(DirectoryWatcher watcher, Path file) {
-        fail("Should not occur");
-      }
-
-      @Override
-      public void directoryDeleted(DirectoryWatcher watcher, Path dir) {
-        assertTrue("Watcher did not return a correct path", paths.remove(dir));
+      public void entryDeleted(DirectoryWatcher watcher, Path file) {
+        assertTrue("Watcher did not return a correct path", paths.remove(file));
         latch.countDown();
       }
     });
 
     deleteFileTree(root.resolve("empty1"));
+
+    latch.await(LATCH_TIMEOUT, TimeUnit.SECONDS);
+    assertEquals("Test timed out", 0, latch.getCount());
+  }
+
+  @Test
+  public void testDeleteDirectory3() throws InterruptedException, IOException {
+    /* Nested Deletion Test */
+    final CountDownLatch latch = new CountDownLatch(1);
+
+    final Set<Path> paths = new HashSet<>();
+    paths.add(Paths.get("level1"));
+
+    watcher.subscribe(new DirectoryWatcherSubscriber() {
+      @Override
+      public void entryDeleted(DirectoryWatcher watcher, Path file) {
+        assertTrue("Watcher did not return a correct path", paths.remove(file));
+        latch.countDown();
+      }
+    });
+
+    deleteFileTree(root.resolve("level1"));
 
     latch.await(LATCH_TIMEOUT, TimeUnit.SECONDS);
     assertEquals("Test timed out", 0, latch.getCount());
@@ -184,7 +194,7 @@ public class DirectoryWatcherTest {
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
-      public void fileDeleted(DirectoryWatcher watcher, Path file) {
+      public void entryDeleted(DirectoryWatcher watcher, Path file) {
         assertEquals("Watcher did not return a correct path", deletePath, file);
         latch.countDown();
       }
@@ -204,7 +214,7 @@ public class DirectoryWatcherTest {
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
-      public void fileDeleted(DirectoryWatcher watcher, Path file) {
+      public void entryDeleted(DirectoryWatcher watcher, Path file) {
         assertEquals("Watcher did not return a correct path", deletePath, file);
         latch.countDown();
       }
@@ -227,7 +237,7 @@ public class DirectoryWatcherTest {
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
-      public void fileDeleted(DirectoryWatcher watcher, Path file) {
+      public void entryDeleted(DirectoryWatcher watcher, Path file) {
         assertTrue("Watcher did not return a correct path", paths.remove(file));
         latch.countDown();
       }
@@ -249,7 +259,7 @@ public class DirectoryWatcherTest {
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
-      public void fileModified(DirectoryWatcher watcher, Path file) {
+      public void entryModified(DirectoryWatcher watcher, Path file) {
         assertEquals("Watcher did not return a correct path", modifyPath, file);
         latch.countDown();
       }
@@ -274,7 +284,7 @@ public class DirectoryWatcherTest {
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
-      public void fileModified(DirectoryWatcher watcher, Path file) {
+      public void entryModified(DirectoryWatcher watcher, Path file) {
         assertTrue("Watcher did not return a correct path", paths.remove(file));
         latch.countDown();
       }
