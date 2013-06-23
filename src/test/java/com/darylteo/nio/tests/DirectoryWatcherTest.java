@@ -2,6 +2,7 @@ package com.darylteo.nio.tests;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
@@ -130,6 +131,11 @@ public class DirectoryWatcherTest {
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
+      public void fileDeleted(DirectoryWatcher watcher, Path file) {
+        fail("Should not occur");
+      }
+
+      @Override
       public void directoryDeleted(DirectoryWatcher watcher, Path dir) {
         assertEquals("Watcher did not return a correct path", deletePath, dir);
         latch.countDown();
@@ -152,6 +158,11 @@ public class DirectoryWatcherTest {
     paths.add(Paths.get("empty1"));
 
     watcher.subscribe(new DirectoryWatcherSubscriber() {
+      @Override
+      public void fileDeleted(DirectoryWatcher watcher, Path file) {
+        fail("Should not occur");
+      }
+
       @Override
       public void directoryDeleted(DirectoryWatcher watcher, Path dir) {
         assertTrue("Watcher did not return a correct path", paths.remove(dir));

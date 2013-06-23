@@ -34,7 +34,8 @@ public class DirectoryWatcher {
   private final List<Pattern> excludes = new LinkedList<>();
 
   /* Used to determine watch status */
-  private final Set<WatchKey> dirs = new HashSet<>();
+  private final Set<WatchKey> keys = new HashSet<>();
+  private final Set<Path> dirs = new HashSet<>();
 
   /* Constructors */
   DirectoryWatcher(final WatchService watcher, final Path path) throws IOException {
@@ -57,11 +58,9 @@ public class DirectoryWatcher {
 
   /* WatchService */
   private void register(Path path, final WatchService watcher) throws IOException {
-    if (!path.isAbsolute()) {
-      path = path.toAbsolutePath();
-    }
+    path = path.toAbsolutePath();
 
-    dirs.add(path.register(
+    keys.add(path.register(
       watcher,
       new WatchEvent.Kind<?>[] {
         StandardWatchEventKinds.ENTRY_CREATE,
@@ -70,6 +69,13 @@ public class DirectoryWatcher {
       },
       new WatchEvent.Modifier[] { SensitivityWatchEventModifier.HIGH }
       ));
+
+    dirs.add(path);
+  }
+
+  private void deregister(WatchKey key, Path path) {
+    keys.remove(key);
+    dirs.remove(path);
   }
 
   /* Subscriptions */
@@ -221,7 +227,11 @@ public class DirectoryWatcher {
     }
 
     path = actualPath(key, path);
-    /* TODO :Detect directories */
+
+    // ignore directories
+    if (dirs.contains(path)) {
+      return;
+    }
 
     fileDeleted(relativePath(path));
   }
@@ -230,6 +240,9 @@ public class DirectoryWatcher {
     if (!isTrackingKey(key)) {
       return;
     }
+
+    Path dir = relativePath(((Path) key.watchable()));
+    directoryDeleted(dir);
   }
 
   void directoryCreated(Path dir) throws IOException {
@@ -263,7 +276,7 @@ public class DirectoryWatcher {
   }
 
   private boolean isTrackingKey(WatchKey key) {
-    return dirs.contains(key);
+    return keys.contains(key);
   }
 
   private Path actualPath(WatchKey key, Path path) {
