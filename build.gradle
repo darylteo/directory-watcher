@@ -1,6 +1,14 @@
+buildscript {
+  repositories { mavenCentral() }
+  dependencies { classpath 'org.ajoberstar:gradle-git:0.6.3' }
+}
+
+import org.ajoberstar.gradle.git.tasks.*
+
 apply plugin: 'java'
 apply plugin: 'maven-publish'
 apply plugin: 'signing'
+apply plugin: 'github-pages'
 
 sourceCompatibility = 1.7
 
@@ -77,5 +85,17 @@ publishing {
       }
     }
   }
+}
 
+githubPages {
+  repoUri = 'git@github.com:darylteo/directory-watcher.git'
+
+  pages {
+    from(javadoc) { into 'javadoc/current/' }
+    from(javadoc) {
+      // remove -SNAPSHOT from the version if it exists
+      def _v = project.version - ~/-SNAPSHOT$/
+      into "javadoc/$_v"
+    }
+  }
 }
