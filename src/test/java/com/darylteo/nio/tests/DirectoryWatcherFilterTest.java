@@ -186,6 +186,17 @@ public class DirectoryWatcherFilterTest {
   }
 
   @Test
+  public void testIncludes14() throws InterruptedException, IOException {
+    watcher.include("f*/**");
+
+    assertFalse(watcher.shouldTrack(Paths.get("file")));
+    assertFalse(watcher.shouldTrack(Paths.get("file.json")));
+    assertTrue(watcher.shouldTrack(Paths.get("foo/file")));
+    assertTrue(watcher.shouldTrack(Paths.get("foo/file.json")));
+    assertTrue(watcher.shouldTrack(Paths.get("foo/bar/file.json")));
+  }
+
+  @Test
   public void testExcludes1() throws InterruptedException, IOException {
     watcher.exclude("**");
 
