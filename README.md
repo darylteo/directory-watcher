@@ -13,6 +13,13 @@ Watches for changes in files and folders recursively. Features Ant style filteri
 </dependency>
 ````
 
+### Gradle
+```groovy
+dependencies {
+ compile 'com.darylteo~directory-watcher~1.1.1'
+}
+````
+
 ## Documentation
 [JavaDoc](http://darylteo.github.io/directory-watcher/javadoc/current/)
 
