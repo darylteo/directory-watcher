@@ -1,5 +1,5 @@
 apply plugin: 'java'
-apply plugin: 'maven'
+apply plugin: 'maven-publish'
 apply plugin: 'signing'
 
 sourceCompatibility = 1.7
@@ -12,12 +12,10 @@ if (!project.hasProperty('release')){
   ext.release = false;
 }
 
-if(!release){
-  version = "$version-SNAPSHOT"
-}
+def release = this.version.endsWith('-SNAPSHOT')
 
 // These tasks are required for maven/sonatype
-task docJar(type: Jar, dependsOn: javadoc) {
+task javadocJar(type: Jar, dependsOn: javadoc) {
   classifier = 'javadoc'
   from tasks.javadoc.destinationDir
 }
@@ -27,45 +25,31 @@ task sourcesJar(type: Jar) {
   from sourceSets.main.allSource
 }
 
-artifacts {
-  archives docJar
-  archives sourcesJar
-}
-
-signing {
-  required { release && gradle.taskGraph.hasTask("uploadArchives") }
-  sign configurations.archives
-}
-
-install {
-  repositories.mavenInstaller { pom.artifactId = artifact }
-}
-
-uploadArchives {
-  group 'build'
-  description = "Does a maven deploy of archives artifacts"
-
+publishing {
   repositories {
-    mavenDeployer {
-      setUniqueVersion(false)
-
-      configuration = configurations.archives
-
-      repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-        authentication(userName: sonatypeUsername, password: sonatypePassword)
+    maven {
+      credentials {
+        username sonatypeUsername
+        password sonatypePassword
       }
+      url (release ? 'https://oss.sonatype.org/content/repositories/snapshots/' : 'https://oss.sonatype.org/service/local/staging/deploy/maven2/')
+    }
+  }
 
-      snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-        authentication(userName: sonatypeUsername, password: sonatypePassword)
-      }
+  publications {
+    maven(MavenPublication) {
+      groupId project.group
+      version project.version
+      artifactId project.name
 
-      if (release) {
-        beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
-      }
+      artifact jar
+      artifact sourcesJar { classifier 'sources' }
+      artifact javadocJar { classifier 'javadoc' }
 
-      pom {
-        artifactId = artifact
-        project {
+      pom.withXml {
+        asNode().children().last() + {
+          resolveStrategy = Closure.DELEGATE_FIRST
+
           name 'Java Directory Watcher'
           description 'Watch and receive notifications on filesystem changes using Java 7 NIO\'s WatchService'
           inceptionYear '2013'
@@ -88,9 +72,10 @@ uploadArchives {
               distribution 'repo'
             }
           }
-          properties { setProperty('project.build.sourceEncoding', 'UTF8') }
+          properties {  'project.build.sourceEncoding' 'UTF8' }
         }
       }
     }
   }
+
 }

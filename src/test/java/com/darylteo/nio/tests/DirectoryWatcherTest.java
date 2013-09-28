@@ -14,12 +14,12 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.darylteo.nio.DirectoryChangedSubscriber;
 import com.darylteo.nio.DirectoryWatcher;
 import com.darylteo.nio.DirectoryWatcherFactory;
 import com.darylteo.nio.DirectoryWatcherSubscriber;
@@ -164,6 +164,7 @@ public class DirectoryWatcherTest {
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
       public void entryDeleted(DirectoryWatcher watcher, Path file) {
+        System.out.println("Entry Deleted: " + file);
         assertEquals("Watcher did not return a correct path", deletePath, file);
         countdown();
       }
@@ -184,6 +185,7 @@ public class DirectoryWatcherTest {
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
       public void entryDeleted(DirectoryWatcher watcher, Path file) {
+        System.out.println("Entry Deleted: " + file);
         assertTrue("Watcher did not return a correct path", paths.remove(file));
         countdown();
       }
@@ -204,6 +206,7 @@ public class DirectoryWatcherTest {
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
       public void entryDeleted(DirectoryWatcher watcher, Path file) {
+        System.out.println("Entry Deleted: " + file);
         assertTrue("Watcher did not return a correct path", paths.remove(file));
         countdown();
       }
@@ -273,6 +276,25 @@ public class DirectoryWatcherTest {
       Files.delete(root.resolve(p));
     }
 
+    awaitLatch();
+  }
+
+  @Test
+  public void testDirectoryChangedSubscriber() throws IOException, InterruptedException {
+    /* Modify a single file in root */
+    final Path modifyPath = Paths.get("file");
+
+    initLatch(1);
+
+    watcher.subscribe(new DirectoryChangedSubscriber() {
+      @Override
+      public void directoryChanged(DirectoryWatcher watcher, Path path) {
+        assertEquals("Watcher did not return a correct path", modifyPath, path);
+        countdown();
+      }
+    });
+
+    writeToFile(root.resolve(modifyPath));
     awaitLatch();
   }
 
