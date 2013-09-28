@@ -14,12 +14,9 @@ import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -261,8 +258,6 @@ public class DirectoryWatcher {
     if (!shouldTrack(entry)) {
       return;
     }
-
-    System.out.println("Deleted Entry: " + entry);
 
     for (DirectoryWatcherSubscriber sub : subscribers) {
       sub.entryDeleted(this, entry);

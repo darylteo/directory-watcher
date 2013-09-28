@@ -164,6 +164,7 @@ public class DirectoryWatcherTest {
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
       public void entryDeleted(DirectoryWatcher watcher, Path file) {
+        System.out.println("Entry Deleted: " + file);
         assertEquals("Watcher did not return a correct path", deletePath, file);
         countdown();
       }
@@ -184,6 +185,7 @@ public class DirectoryWatcherTest {
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
       public void entryDeleted(DirectoryWatcher watcher, Path file) {
+        System.out.println("Entry Deleted: " + file);
         assertTrue("Watcher did not return a correct path", paths.remove(file));
         countdown();
       }
@@ -204,6 +206,7 @@ public class DirectoryWatcherTest {
     watcher.subscribe(new DirectoryWatcherSubscriber() {
       @Override
       public void entryDeleted(DirectoryWatcher watcher, Path file) {
+        System.out.println("Entry Deleted: " + file);
         assertTrue("Watcher did not return a correct path", paths.remove(file));
         countdown();
       }
