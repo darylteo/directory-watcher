@@ -6,7 +6,7 @@ buildscript {
 import org.ajoberstar.gradle.git.tasks.*
 
 apply plugin: 'java'
-apply plugin: 'maven-publish'
+apply plugin: 'maven'
 apply plugin: 'signing'
 apply plugin: 'github-pages'
 
@@ -14,10 +14,15 @@ sourceCompatibility = 1.7
 
 repositories { mavenCentral() }
 
+configurations {
+  provided
+  archives
+}
+
 dependencies { testCompile 'junit:junit:4.+' }
 
 if (!project.hasProperty('release')){
-  ext.release = false;
+  ext.release = false
 }
 
 def release = this.version.endsWith('-SNAPSHOT')
@@ -33,55 +38,56 @@ task sourcesJar(type: Jar) {
   from sourceSets.main.allSource
 }
 
-publishing {
-  repositories {
-    maven {
-      credentials {
-        username sonatypeUsername
-        password sonatypePassword
-      }
-      url (release ? 'https://oss.sonatype.org/content/repositories/snapshots/' : 'https://oss.sonatype.org/service/local/staging/deploy/maven2/')
+artifacts {
+  archives javadocJar
+  archives sourcesJar
+}
+
+def info = {
+  resolveStrategy = Closure.DELEGATE_FIRST
+
+  name 'Java Directory Watcher'
+  description 'Watch and receive notifications on filesystem changes using Java 7 NIO\'s WatchService'
+  inceptionYear '2013'
+  url 'http://github.com/darylteo/directory-watcher'
+
+  developers {
+    developer {
+      id 'darylteo'
+      name 'Daryl Teo'
+      email 'i.am@darylteo.com'
     }
   }
 
-  publications {
-    maven(MavenPublication) {
-      groupId project.group
-      version project.version
-      artifactId project.name
+  scm { url 'http://github.com/darylteo/directory-watcher' }
 
-      artifact jar
-      artifact sourcesJar { classifier 'sources' }
-      artifact javadocJar { classifier 'javadoc' }
+  licenses {
+    license {
+      name 'DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE'
+      url 'http://www.wtfpl.net/txt/copying/'
+      distribution 'repo'
+    }
+  }
 
-      pom.withXml {
-        asNode().children().last() + {
-          resolveStrategy = Closure.DELEGATE_FIRST
+  properties { 'project.build.sourceEncoding' 'UTF8'  }
+}
 
-          name 'Java Directory Watcher'
-          description 'Watch and receive notifications on filesystem changes using Java 7 NIO\'s WatchService'
-          inceptionYear '2013'
-          url 'http://github.com/darylteo/directorywatcher'
+uploadArchives {
+  repositories {
+    mavenDeployer {
+      def url = release ? 'https://oss.sonatype.org/content/repositories/snapshots/' : 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+      repository(url: url) {
+        authentication(userName: sonatypeUsername, password : sonatypePassword)
+      }
 
-          developers {
-            developer {
-              id 'darylteo'
-              name 'Daryl Teo'
-              email 'i.am@darylteo.com'
-            }
-          }
+      configuration = configurations.archives
 
-          scm { url 'http://github.com/darylteo/directorywatcher' }
+      pom {
+        groupId = project.group
+        version = project.version
+        artifactId = project.name
 
-          licenses {
-            license {
-              name 'DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE'
-              url 'http://www.wtfpl.net/txt/copying/'
-              distribution 'repo'
-            }
-          }
-          properties {  'project.build.sourceEncoding' 'UTF8' }
-        }
+        project info
       }
     }
   }

@@ -32,7 +32,7 @@ import com.sun.nio.file.SensitivityWatchEventModifier;
  * 
  * <p>
  * Creating a new DirectoryWatcher is done through an instance of
- * {@link DirectoryWatcherFactory}.
+ * {@link ThreadPoolDirectoryWatchService}.
  * </p>
  * 
  * <pre>

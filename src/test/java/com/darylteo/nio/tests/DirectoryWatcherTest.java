@@ -21,12 +21,12 @@ import org.junit.Test;
 
 import com.darylteo.nio.DirectoryChangedSubscriber;
 import com.darylteo.nio.DirectoryWatcher;
-import com.darylteo.nio.DirectoryWatcherFactory;
+import com.darylteo.nio.ThreadPoolDirectoryWatchService;
 import com.darylteo.nio.DirectoryWatcherSubscriber;
 
 public class DirectoryWatcherTest {
 
-  private DirectoryWatcherFactory factory;
+  private ThreadPoolDirectoryWatchService factory;
   private DirectoryWatcher watcher;
   private Path root = Paths.get("watcher_test");
 
@@ -39,7 +39,7 @@ public class DirectoryWatcherTest {
 
     resetTestFolder(root);
 
-    factory = new DirectoryWatcherFactory();
+    factory = new ThreadPoolDirectoryWatchService();
     watcher = factory.newWatcher(root);
   }
 

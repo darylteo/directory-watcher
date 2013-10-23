@@ -11,18 +11,18 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.darylteo.nio.DirectoryWatcher;
-import com.darylteo.nio.DirectoryWatcherFactory;
+import com.darylteo.nio.ThreadPoolDirectoryWatchService;
 
 public class DirectoryWatcherFilterTest {
 
-  private DirectoryWatcherFactory factory;
+  private ThreadPoolDirectoryWatchService factory;
   private DirectoryWatcher watcher;
 
   @Before
   public void before() throws IOException {
     System.out.println("\nRunning Test");
 
-    factory = new DirectoryWatcherFactory();
+    factory = new ThreadPoolDirectoryWatchService();
     watcher = factory.newWatcher(Paths.get(""));
   }
 
