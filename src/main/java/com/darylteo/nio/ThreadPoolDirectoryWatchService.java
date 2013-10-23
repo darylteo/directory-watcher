@@ -7,24 +7,12 @@ import java.util.concurrent.Executors;
 
 /**
  * <p>
- * The DirectoryWatcherFactory is responsible for creating instances of
- * {@link DirectoryWatcher} for you. By default, each factory is configured with
- * an ExecutorService with a single execution thread. You may increase the
- * number of threads with the appropriate contructor.
- * </p>
- * <p>
- * Every DirectoryWatcher that is created by this Factory will use the same
- * WatchService to receive file system events. If this is not desirable,
- * instantiate a separate DirectoryWatcherFactory.
- * </p>
- * <p>
- * All created DirectoryWatcher instances can be easily cleaned up by calling
- * {@link ThreadPoolDirectoryWatchService#close} on this Factory as it
- * implements the AutoCloseable interface. You should do this in any cleanup
- * process done by your application.
+ * This implementation of DirectoryWatchService automatically waits for changes
+ * using a Thread Pool.
  * </p>
  * 
  * @author Daryl Teo <i.am@darylteo.com>
+ * @see AbstractDirectoryWatchService
  * @see DirectoryWatcher
  */
 public class ThreadPoolDirectoryWatchService extends AbstractDirectoryWatchService {

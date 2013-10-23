@@ -32,7 +32,7 @@ import com.sun.nio.file.SensitivityWatchEventModifier;
  * 
  * <p>
  * Creating a new DirectoryWatcher is done through an instance of
- * {@link ThreadPoolDirectoryWatchService}.
+ * {@link DirectoryWatchService}.
  * </p>
  * 
  * <pre>
@@ -66,7 +66,7 @@ import com.sun.nio.file.SensitivityWatchEventModifier;
  * <p>
  * It is not mandatory to respond to all types of events. Simple override the
  * methods corresponding to the events you'd like to track. As a convenience,
- * you can also use a {@link DirectoryChangedSubscriber @}, which will notify
+ * you can also use a {@link DirectoryChangedSubscriber}, which will notify
  * you of all events.
  * </p>
  * 
