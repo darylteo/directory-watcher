@@ -36,7 +36,7 @@ import com.sun.nio.file.SensitivityWatchEventModifier;
  * </p>
  * 
  * <pre>
- * DirectoryWatcherFactory factory = new DirectoryWatcherFactory();
+ * ThreadPoolDirectoryWatchService factory = new ThreadPoolDirectoryWatchService(); // or PollingDirectoryWatchService
  * DirectoryWatcher watcher = factory.newWatcher(&quot;&quot;);
  * </pre>
  * 
@@ -186,7 +186,6 @@ import com.sun.nio.file.SensitivityWatchEventModifier;
  * </p>
  * 
  * @author Daryl Teo <i.am@darylteo.com>
- * 
  */
 public class DirectoryWatcher {
   /* Properties */

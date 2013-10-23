@@ -9,14 +9,14 @@ Watches for changes in files and folders recursively. Features Ant style filteri
 <dependency>
   <groupId>com.darylteo</groupId>
   <artifactId>directory-watcher</artifactId>
-  <version>1.1.1</version>
+  <version>1.2.0</version>
 </dependency>
 ````
 
 ### Gradle
 ```groovy
 dependencies {
-  compile 'com.darylteo~directory-watcher~1.1.1'
+  compile 'com.darylteo~directory-watcher~1.2.0'
 }
 ````
 
@@ -26,7 +26,7 @@ dependencies {
 public class Example {
   public static void main(String[] args) {
     // Get Watcher
-    DirectoryWatcherFactory factory = new DirectoryWatcherFactory();
+    ThreadPoolDirectoryWatchService factory = new ThreadPoolDirectoryWatchService(); // or PollingDirectoryWatchService
     DirectoryWatcher watcher = factory.newWatcher("");
     
     // Configure 
