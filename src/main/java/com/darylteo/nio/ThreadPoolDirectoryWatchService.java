@@ -59,4 +59,10 @@ public class ThreadPoolDirectoryWatchService extends AbstractDirectoryWatchServi
       }
     }
   }
+  
+  @Override
+  public void close() throws Exception {
+    executorService.shutdownNow();
+    super.close();
+  }
 }
