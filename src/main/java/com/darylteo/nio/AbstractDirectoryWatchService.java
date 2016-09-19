@@ -1,13 +1,7 @@
 package com.darylteo.nio;
 
 import java.io.IOException;
-import java.nio.file.FileSystems;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardWatchEventKinds;
-import java.nio.file.WatchEvent;
-import java.nio.file.WatchKey;
-import java.nio.file.WatchService;
+import java.nio.file.*;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -27,7 +21,7 @@ import java.util.List;
  * implements the AutoCloseable interface. You should do this in any cleanup
  * process done by your application.
  * </p>
- * 
+ *
  * @author Daryl Teo <i.am@darylteo.com>
  * @see DirectoryWatcher
  */
@@ -50,28 +44,54 @@ public abstract class AbstractDirectoryWatchService implements AutoCloseable, Di
    * <p>
    * Instantiates a new DirectoryWatcher for the path given.
    * </p>
-   * 
-   * @param dir
-   *          the path to watch for events.
+   *
+   * @param dir the path to watch for events.
    * @return a DirectoryWatcher for this path (and all child paths)
    * @throws IOException
    */
   public DirectoryWatcher newWatcher(String dir) throws IOException {
-    return newWatcher(Paths.get(dir));
+    return newWatcher(Paths.get(dir), null);
   }
 
   /**
    * <p>
    * Instantiates a new DirectoryWatcher for the path given.
    * </p>
-   * 
-   * @param dir
-   *          the path to watch for events.
+   *
+   * @param dir       the path to watch for events.
+   * @param separator the file path separator for this watcher
+   * @return a DirectoryWatcher for this path (and all child paths)
+   * @throws IOException
+   */
+  public DirectoryWatcher newWatcher(String dir, String separator) throws IOException {
+    return newWatcher(Paths.get(dir), separator);
+  }
+
+  /**
+   * <p>
+   * Instantiates a new DirectoryWatcher for the path given.
+   * </p>
+   *
+   * @param dir the path to watch for events.
    * @return a DirectoryWatcher for this path (and all child paths)
    * @throws IOException
    */
   public DirectoryWatcher newWatcher(Path dir) throws IOException {
-    DirectoryWatcher watcher = new DirectoryWatcher(this.watchService, dir);
+    return newWatcher(dir, null);
+  }
+
+  /**
+   * <p>
+   * Instantiates a new DirectoryWatcher for the path given.
+   * </p>
+   *
+   * @param dir       the path to watch for events.
+   * @param separator the file path separator for this watcher
+   * @return a DirectoryWatcher for this path (and all child paths)
+   * @throws IOException
+   */
+  public DirectoryWatcher newWatcher(Path dir, String separator) throws IOException {
+    DirectoryWatcher watcher = new DirectoryWatcher(this.watchService, dir, separator);
     addWatcher(watcher);
 
     return watcher;

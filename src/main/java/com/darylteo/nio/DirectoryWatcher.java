@@ -1,26 +1,13 @@
 package com.darylteo.nio;
 
+import com.sun.nio.file.SensitivityWatchEventModifier;
+
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.FileVisitResult;
-import java.nio.file.FileVisitor;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.StandardWatchEventKinds;
-import java.nio.file.WatchEvent;
-import java.nio.file.WatchKey;
-import java.nio.file.WatchService;
+import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Pattern;
-
-import com.sun.nio.file.SensitivityWatchEventModifier;
 
 /**
  * <p>
@@ -29,47 +16,47 @@ import com.sun.nio.file.SensitivityWatchEventModifier;
  * detects changes and passes these events on to its subscribers
  * </p>
  * <a name="Registering"><h4>Registering</h4></a>
- * 
+ * <p>
  * <p>
  * Creating a new DirectoryWatcher is done through an instance of
  * {@link DirectoryWatchService}.
  * </p>
- * 
+ * <p>
  * <pre>
  * ThreadPoolDirectoryWatchService factory = new ThreadPoolDirectoryWatchService(); // or PollingDirectoryWatchService
  * DirectoryWatcher watcher = factory.newWatcher(&quot;&quot;);
  * </pre>
- * 
+ * <p>
  * <a name="Subscribing"><h4>Subscribing</h4></a>
  * <p>
  * In order to respond to file system changes, a
  * {@link DirectoryWatcherSubscriber} should be provided to the
  * DirectoryWatcher. Subscribers can respond to 3 types of events:
  * </p>
- * 
+ * <p>
  * <pre>
  * watcher.subscribe(new DirectoryWatcherSubscriber() {
  *   public void entryCreated(DirectoryWatcher watcher, Path file) {
  *     // ...
  *   }
- * 
+ *
  *   public void entryModified(DirectoryWatcher watcher, Path file) {
  *     // ...
  *   }
- * 
+ *
  *   public void entryDeleted(DirectoryWatcher watcher, Path file) {
  *     // ...
  *   }
  * });
  * </pre>
- * 
+ * <p>
  * <p>
  * It is not mandatory to respond to all types of events. Simple override the
  * methods corresponding to the events you'd like to track. As a convenience,
  * you can also use a {@link DirectoryChangedSubscriber}, which will notify
  * you of all events.
  * </p>
- * 
+ * <p>
  * <pre>
  * watcher.subscribe(new DirectoryChangedSubscriber() {
  *   public void directoryChanged(DirectoryWatcher watcher, Path path) {
@@ -77,7 +64,7 @@ import com.sun.nio.file.SensitivityWatchEventModifier;
  *   }
  * });
  * </pre>
- * 
+ * <p>
  * <a name="Filtering"><h4>Filtering</h4></a>
  * <p>
  * By default, the DirectoryWatcher will notify subscribers of every change in
@@ -92,74 +79,74 @@ import com.sun.nio.file.SensitivityWatchEventModifier;
  * You can use {@link DirectoryWatcher#shouldTrack} to check if a particular
  * path is being watched.
  * </p>
- * 
+ * <p>
  * <p>
  * Some (inexhaustive) Examples:
  * </p>
- * 
+ * <p>
  * <h5>Track a specific file in the base directory</h5>
- * 
+ * <p>
  * <pre>
  * watcher.include(&quot;file&quot;);
- * 
+ *
  * watcher.shouldTrack(Paths.get(&quot;file&quot;)); // true
  * watcher.shouldTrack(Paths.get(&quot;file.json&quot;)); // false
  * watcher.shouldTrack(Paths.get(&quot;foo/file&quot;)); // false
  * watcher.shouldTrack(Paths.get(&quot;foo/file.json&quot;)); // false
  * watcher.shouldTrack(Paths.get(&quot;foo/bar/file.json&quot;)); // false
  * </pre>
- * 
+ * <p>
  * <h5>Track all .json files in the base directory</h5>
- * 
+ * <p>
  * <pre>
  * watcher.include(&quot;*.json&quot;);
- * 
+ *
  * watcher.shouldTrack(Paths.get(&quot;file&quot;)); // false
  * watcher.shouldTrack(Paths.get(&quot;file.json&quot;)); // true
  * watcher.shouldTrack(Paths.get(&quot;foo/file&quot;)); // false
  * watcher.shouldTrack(Paths.get(&quot;foo/file.json&quot;)); // false
  * watcher.shouldTrack(Paths.get(&quot;foo/bar/file.json&quot;)); // false
  * </pre>
- * 
- * 
+ * <p>
+ * <p>
  * <h5>Track all .json files in all directories</h5>
- * 
+ * <p>
  * <pre>
  * watcher.include(&quot;*&#42;/file.json&quot;);
- * 
+ *
  * watcher.shouldTrack(Paths.get(&quot;file&quot;)); // false
  * watcher.shouldTrack(Paths.get(&quot;file.json&quot;)); // true
  * watcher.shouldTrack(Paths.get(&quot;foo/file&quot;)); // false
  * watcher.shouldTrack(Paths.get(&quot;foo/file.json&quot;)); // true
  * watcher.shouldTrack(Paths.get(&quot;foo/bar/file.json&quot;)); // true
  * </pre>
- * 
+ * <p>
  * <h5>Ignore changes in a directory and subdirectories</h5>
- * 
+ * <p>
  * <pre>
  * watcher.exclude(&quot;foo/**&quot;);
- * 
+ *
  * watcher.shouldTrack(Paths.get(&quot;file&quot;)); // true
  * watcher.shouldTrack(Paths.get(&quot;file.json&quot;)); // true
  * watcher.shouldTrack(Paths.get(&quot;foo/file&quot;)); // false
  * watcher.shouldTrack(Paths.get(&quot;foo/file.json&quot;)); // false
  * watcher.shouldTrack(Paths.get(&quot;foo/bar/file.json&quot;)); // false
  * </pre>
- * 
+ * <p>
  * <h5>Ignore changes within a directory but not subdirectories</h5>
- * 
+ * <p>
  * <pre>
  * watcher.exclude(&quot;foo/*&quot;);
- * 
+ *
  * watcher.shouldTrack(Paths.get(&quot;file&quot;)); // true
  * watcher.shouldTrack(Paths.get(&quot;file.json&quot;)); // true
  * watcher.shouldTrack(Paths.get(&quot;foo/file&quot;)); // false
  * watcher.shouldTrack(Paths.get(&quot;foo/file.json&quot;)); // false
  * watcher.shouldTrack(Paths.get(&quot;foo/bar/file.json&quot;)); // true
  * </pre>
- * 
+ * <p>
  * <h4>Technical Notes</h4>
- * 
+ * <p>
  * <h5>Directory Changes</h5>
  * <p>
  * Events from files are relatively straight forward. However, directories are a
@@ -167,16 +154,16 @@ import com.sun.nio.file.SensitivityWatchEventModifier;
  * propagating from the directory itself (depending on operating system). For
  * example, adding a file to a watched directory may cause 2 events (a File
  * Created event and a Directory Modified event).
- * 
+ * <p>
  * Therefore, if you wish to completely ignore all changes within a directory,
  * it may also be necessary to exclude changes to the directory itself.
  * </p>
- * 
+ * <p>
  * <pre>
  * watcher.exclude(&quot;foo&quot;);
  * watcher.exclude(&quot;foo/**&quot;);
  * </pre>
- * 
+ * <p>
  * <h5>Tracking Deleted Entries</h5>
  * <p>
  * In order to make this library as performant as possible, there is no
@@ -184,7 +171,7 @@ import com.sun.nio.file.SensitivityWatchEventModifier;
  * deleted entry was originally a directory or a file. If this functionality is
  * required you should track the file structure yourself.
  * </p>
- * 
+ *
  * @author Daryl Teo <i.am@darylteo.com>
  */
 public class DirectoryWatcher {
@@ -202,8 +189,15 @@ public class DirectoryWatcher {
   /* Used to determine watch status */
   private final Set<WatchKey> keys = new HashSet<>();
 
+  /* Set the FilePath Separator */
+  private final String separator;
+
   /* Constructors */
   DirectoryWatcher(final WatchService watcher, final Path path) throws IOException {
+    this(watcher, path, null);
+  }
+
+  DirectoryWatcher(final WatchService watcher, final Path path, final String separator) throws IOException {
     this.path = path.toAbsolutePath();
     this.watcher = watcher;
 
@@ -214,6 +208,8 @@ public class DirectoryWatcher {
         return FileVisitResult.CONTINUE;
       }
     });
+
+    this.separator = separator == null ? File.separator : separator;
   }
 
   /**
@@ -228,14 +224,14 @@ public class DirectoryWatcher {
     path = path.toAbsolutePath();
 
     keys.add(path.register(
-      watcher,
-      new WatchEvent.Kind<?>[] {
-        StandardWatchEventKinds.ENTRY_CREATE,
-        StandardWatchEventKinds.ENTRY_DELETE,
-        StandardWatchEventKinds.ENTRY_MODIFY
-      },
-      new WatchEvent.Modifier[] { SensitivityWatchEventModifier.HIGH }
-      ));
+        watcher,
+        new WatchEvent.Kind<?>[]{
+            StandardWatchEventKinds.ENTRY_CREATE,
+            StandardWatchEventKinds.ENTRY_DELETE,
+            StandardWatchEventKinds.ENTRY_MODIFY
+        },
+        new WatchEvent.Modifier[]{SensitivityWatchEventModifier.HIGH}
+    ));
   }
 
   private void deregister(WatchKey key) {
@@ -265,17 +261,18 @@ public class DirectoryWatcher {
   }
 
   private Pattern compileFilter(String filter) {
-    if (filter.endsWith("/") || filter.endsWith("\\")) {
+    if (filter.endsWith(this.separator)) {
       filter = filter + "**";
     }
 
-    String[] subs = filter.split("[/|\\\\]");
-    StringBuilder pattern = new StringBuilder("^");
+    final String regexSeparator = Pattern.quote(this.separator);
+    final String[] subs = filter.split(regexSeparator);
+    final StringBuilder pattern = new StringBuilder("^");
     boolean appendDelimiter = false;
 
     for (String sub : subs) {
       if (appendDelimiter) {
-        pattern.append(File.separator);
+        pattern.append(regexSeparator);
       } else {
         appendDelimiter = true;
       }
@@ -285,10 +282,10 @@ public class DirectoryWatcher {
         appendDelimiter = false;
       } else {
         pattern.append(sub
-          .replace(".", "\\.")
-          .replace("?", ".")
-          .replace("*", "[^" + File.separator + "]*?")
-          );
+            .replace(".", "\\.")
+            .replace("?", ".")
+            .replace("*", "[^" + regexSeparator + "]*?")
+        );
       }
     }
 

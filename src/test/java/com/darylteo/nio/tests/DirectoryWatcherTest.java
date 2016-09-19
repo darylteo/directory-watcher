@@ -64,10 +64,13 @@ public class DirectoryWatcherTest {
     synchronized (this) {
       while (true) {
         try {
+          System.out.println(latch.getCount());
           if (latch.getCount() == 0) {
+            System.out.println("Finish");
             return;
           }
-          this.wait();
+
+          this.wait(5000);
         } catch (InterruptedException e) {
           // TODO Auto-generated catch block
           e.printStackTrace();
@@ -170,7 +173,7 @@ public class DirectoryWatcherTest {
       }
     });
 
-    Files.delete(root.resolve(deletePath));
+    deleteFile(root.resolve(deletePath));
     awaitLatch();
   }
 
@@ -231,7 +234,7 @@ public class DirectoryWatcherTest {
       }
     });
 
-    Files.delete(root.resolve(deletePath));
+    deleteFile(root.resolve(deletePath));
     awaitLatch();
   }
 
@@ -250,7 +253,7 @@ public class DirectoryWatcherTest {
       }
     });
 
-    Files.delete(root.resolve(deletePath));
+    deleteFile(root.resolve(deletePath));
     awaitLatch();
   }
 
@@ -273,7 +276,7 @@ public class DirectoryWatcherTest {
     });
 
     for (Path p : paths) {
-      Files.delete(root.resolve(p));
+      deleteFile(root.resolve(p));
     }
 
     awaitLatch();
@@ -344,26 +347,44 @@ public class DirectoryWatcherTest {
     awaitLatch();
   }
 
+  private void deleteFile(final Path path) {
+    new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          Files.delete(path);
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+      }
+    }).start();
+  }
+
   private void deleteFileTree(final Path path) {
-    try {
-      Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
-        @Override
-        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-          Files.delete(file);
-          return FileVisitResult.CONTINUE;
-        }
+    new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+              Files.delete(file);
+              return FileVisitResult.CONTINUE;
+            }
 
-        @Override
-        public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-          Files.delete(dir);
-          return FileVisitResult.CONTINUE;
-        }
+            @Override
+            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+              Files.delete(dir);
+              return FileVisitResult.CONTINUE;
+            }
 
-      });
-    } catch (IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
+          });
+        } catch (IOException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        }
+      }
+    }).start();
   }
 
   private void writeToFile(Path path) throws IOException {
