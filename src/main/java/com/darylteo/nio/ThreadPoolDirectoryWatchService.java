@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * using a Thread Pool.
  * </p>
  *
- * @author Daryl Teo <i.am@darylteo.com>
+ * @author Daryl Teo
  * @see AbstractDirectoryWatchService
  * @see DirectoryWatcher
  */
@@ -39,8 +39,7 @@ public class ThreadPoolDirectoryWatchService extends AbstractDirectoryWatchServi
    * Instantiates a DirectoryWatcherFactory with a provided thread count.
    * </p>
    *
-   * @param threadCount
-   *          - number of threads to spawn for this factory.
+   * @param threadCount - number of threads to spawn for this factory.
    * @throws IOException
    */
   public ThreadPoolDirectoryWatchService(int threadCount) throws IOException {
@@ -58,7 +57,8 @@ public class ThreadPoolDirectoryWatchService extends AbstractDirectoryWatchServi
 
     private AtomicBoolean stop = new AtomicBoolean(false);
 
-    public WatcherThread() {}
+    public WatcherThread() {
+    }
 
     public void setStop(boolean stop) {
       this.stop.set(stop);
