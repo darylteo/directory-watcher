@@ -240,13 +240,16 @@ public class DirectoryWatcher {
   }
 
   private Pattern compileFilter(String filter) {
-    if (filter.endsWith(this.separator)) {
+    if (filter.endsWith("/") || filter.endsWith("\\")) {
       filter = filter + "**";
     }
 
-    final String regexSeparator = Pattern.quote(this.separator);
-    final String[] subs = filter.split(regexSeparator);
+    // split the filter path either using / or \
+    final String[] subs = filter.split("[/\\\\]");
     final StringBuilder pattern = new StringBuilder("^");
+
+    // use the provided separator for paths reported by WatchService
+    final String regexSeparator = Pattern.quote(this.separator);
     boolean appendDelimiter = false;
 
     for (String sub : subs) {
