@@ -6,7 +6,7 @@ import java.nio.file.Path;
  * Subclass this class in order to respond to file change events from
  * {@link DirectoryWatcher} instances.
  * 
- * @author Daryl Teo <i.am@darylteo.com>
+ * @author Daryl Teo
  * 
  */
 public abstract class DirectoryWatcherSubscriber {

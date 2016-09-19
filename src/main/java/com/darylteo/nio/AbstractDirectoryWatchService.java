@@ -22,7 +22,7 @@ import java.util.List;
  * process done by your application.
  * </p>
  *
- * @author Daryl Teo <i.am@darylteo.com>
+ * @author Daryl Teo
  * @see DirectoryWatcher
  */
 public abstract class AbstractDirectoryWatchService implements AutoCloseable, DirectoryWatchService {

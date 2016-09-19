@@ -11,7 +11,7 @@ import java.util.concurrent.Executors;
  * using a Thread Pool.
  * </p>
  * 
- * @author Daryl Teo <i.am@darylteo.com>
+ * @author Daryl Teo
  * @see AbstractDirectoryWatchService
  * @see DirectoryWatcher
  */

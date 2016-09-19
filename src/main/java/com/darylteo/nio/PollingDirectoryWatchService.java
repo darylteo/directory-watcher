@@ -7,7 +7,7 @@ import java.io.IOException;
  * This implementation of DirectoryWatchService provides a mechanism for polling for changes.
  * </p>
  * 
- * @author Daryl Teo <i.am@darylteo.com>
+ * @author Daryl Teo
  * @see AbstractDirectoryWatchService
  * @see DirectoryWatcher
  */

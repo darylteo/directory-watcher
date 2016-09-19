@@ -10,30 +10,27 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 /**
+ * <h3>Reference</h3>
  * <p>
  * The DirectoryWatcher represents a watcher on a whole directory tree. Hence it
  * is unnecessary to recursively register watchers for every directory. It
  * detects changes and passes these events on to its subscribers
  * </p>
- * <a name="Registering"><h4>Registering</h4></a>
- * <p>
+ * <h4><a name="Registering">Registering</a></h4>
  * <p>
  * Creating a new DirectoryWatcher is done through an instance of
  * {@link DirectoryWatchService}.
  * </p>
- * <p>
  * <pre>
  * ThreadPoolDirectoryWatchService factory = new ThreadPoolDirectoryWatchService(); // or PollingDirectoryWatchService
  * DirectoryWatcher watcher = factory.newWatcher(&quot;&quot;);
  * </pre>
- * <p>
- * <a name="Subscribing"><h4>Subscribing</h4></a>
+ * <h4><a name="Subscribing">Subscribing</a></h4>
  * <p>
  * In order to respond to file system changes, a
  * {@link DirectoryWatcherSubscriber} should be provided to the
  * DirectoryWatcher. Subscribers can respond to 3 types of events:
  * </p>
- * <p>
  * <pre>
  * watcher.subscribe(new DirectoryWatcherSubscriber() {
  *   public void entryCreated(DirectoryWatcher watcher, Path file) {
@@ -50,13 +47,11 @@ import java.util.regex.Pattern;
  * });
  * </pre>
  * <p>
- * <p>
  * It is not mandatory to respond to all types of events. Simple override the
  * methods corresponding to the events you'd like to track. As a convenience,
  * you can also use a {@link DirectoryChangedSubscriber}, which will notify
  * you of all events.
  * </p>
- * <p>
  * <pre>
  * watcher.subscribe(new DirectoryChangedSubscriber() {
  *   public void directoryChanged(DirectoryWatcher watcher, Path path) {
@@ -64,8 +59,7 @@ import java.util.regex.Pattern;
  *   }
  * });
  * </pre>
- * <p>
- * <a name="Filtering"><h4>Filtering</h4></a>
+ * <h4><a name="Filtering">Filtering</a></h4>
  * <p>
  * By default, the DirectoryWatcher will notify subscribers of every change in
  * every file under its base path. Often times, this is not desired. You can
@@ -80,12 +74,9 @@ import java.util.regex.Pattern;
  * path is being watched.
  * </p>
  * <p>
- * <p>
  * Some (inexhaustive) Examples:
  * </p>
- * <p>
  * <h5>Track a specific file in the base directory</h5>
- * <p>
  * <pre>
  * watcher.include(&quot;file&quot;);
  *
@@ -95,9 +86,7 @@ import java.util.regex.Pattern;
  * watcher.shouldTrack(Paths.get(&quot;foo/file.json&quot;)); // false
  * watcher.shouldTrack(Paths.get(&quot;foo/bar/file.json&quot;)); // false
  * </pre>
- * <p>
  * <h5>Track all .json files in the base directory</h5>
- * <p>
  * <pre>
  * watcher.include(&quot;*.json&quot;);
  *
@@ -107,10 +96,7 @@ import java.util.regex.Pattern;
  * watcher.shouldTrack(Paths.get(&quot;foo/file.json&quot;)); // false
  * watcher.shouldTrack(Paths.get(&quot;foo/bar/file.json&quot;)); // false
  * </pre>
- * <p>
- * <p>
  * <h5>Track all .json files in all directories</h5>
- * <p>
  * <pre>
  * watcher.include(&quot;*&#42;/file.json&quot;);
  *
@@ -120,9 +106,7 @@ import java.util.regex.Pattern;
  * watcher.shouldTrack(Paths.get(&quot;foo/file.json&quot;)); // true
  * watcher.shouldTrack(Paths.get(&quot;foo/bar/file.json&quot;)); // true
  * </pre>
- * <p>
  * <h5>Ignore changes in a directory and subdirectories</h5>
- * <p>
  * <pre>
  * watcher.exclude(&quot;foo/**&quot;);
  *
@@ -132,9 +116,7 @@ import java.util.regex.Pattern;
  * watcher.shouldTrack(Paths.get(&quot;foo/file.json&quot;)); // false
  * watcher.shouldTrack(Paths.get(&quot;foo/bar/file.json&quot;)); // false
  * </pre>
- * <p>
  * <h5>Ignore changes within a directory but not subdirectories</h5>
- * <p>
  * <pre>
  * watcher.exclude(&quot;foo/*&quot;);
  *
@@ -144,9 +126,7 @@ import java.util.regex.Pattern;
  * watcher.shouldTrack(Paths.get(&quot;foo/file.json&quot;)); // false
  * watcher.shouldTrack(Paths.get(&quot;foo/bar/file.json&quot;)); // true
  * </pre>
- * <p>
  * <h4>Technical Notes</h4>
- * <p>
  * <h5>Directory Changes</h5>
  * <p>
  * Events from files are relatively straight forward. However, directories are a
@@ -154,16 +134,15 @@ import java.util.regex.Pattern;
  * propagating from the directory itself (depending on operating system). For
  * example, adding a file to a watched directory may cause 2 events (a File
  * Created event and a Directory Modified event).
+ * </p>
  * <p>
  * Therefore, if you wish to completely ignore all changes within a directory,
  * it may also be necessary to exclude changes to the directory itself.
  * </p>
- * <p>
  * <pre>
  * watcher.exclude(&quot;foo&quot;);
  * watcher.exclude(&quot;foo/**&quot;);
  * </pre>
- * <p>
  * <h5>Tracking Deleted Entries</h5>
  * <p>
  * In order to make this library as performant as possible, there is no
@@ -172,7 +151,7 @@ import java.util.regex.Pattern;
  * required you should track the file structure yourself.
  * </p>
  *
- * @author Daryl Teo <i.am@darylteo.com>
+ * @author Daryl Teo
  */
 public class DirectoryWatcher {
   /* Properties */

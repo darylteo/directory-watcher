@@ -6,7 +6,7 @@ import java.nio.file.Path;
  * A convenience subclass of {@link DirectoryWatcherSubscriber} for responding
  * to all events.
  * 
- * @author Daryl Teo <i.am@darylteo.com>
+ * @author Daryl Teo
  * 
  */
 public abstract class DirectoryChangedSubscriber extends DirectoryWatcherSubscriber {
